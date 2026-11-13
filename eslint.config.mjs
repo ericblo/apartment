@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // One-off Node scripts that bake the scan into game assets:
+    "scripts/**",
   ]),
 ]);
 
