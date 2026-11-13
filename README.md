@@ -29,14 +29,14 @@ Then open http://localhost:3000/apartment.
 
 `scripts/build-world.cjs` turns a Scaniverse `.glb` export into the game assets. It
 squares the scan up to the axes, removes the ceiling, a mirror "ghost room" and
-floating fragments, lifts the roommate and his bedding out of the mesh, brightens the
-dark hallway, and bakes the floor fill, shadow and walkable grid.
+floating fragments, lifts the roommate and his bedding out of the mesh, fills small
+holes, smooths bumpy surfaces, flattens the floor, evens out lighting and tint between
+rooms, enriches the colours, and bakes the floor fill, shadow and walkable grid.
 
 ```bash
 npm i --no-save sharp pngjs @gltf-transform/cli
 node scripts/build-world.cjs scan.glb out
-npx gltf-transform resize out/clean.glb out/r.glb --width 4096 --height 4096
-npx gltf-transform webp out/r.glb out/w.glb --quality 80
+npx gltf-transform webp out/clean.glb out/w.glb --quality 82
 npx gltf-transform meshopt out/w.glb public/world/apartment.glb --level medium
 cp out/floor.png out/shadow.png public/world/ && cp out/nav.json app/game/nav.json
 ```

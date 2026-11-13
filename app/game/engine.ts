@@ -173,7 +173,7 @@ export class Game {
       const loader = new GLTFLoader();
       loader.setMeshoptDecoder(MeshoptDecoder);
       const gltf = await loader.loadAsync(`${BASE_PATH}/world/apartment.glb`, (e) => {
-        const total = e.total || 3_190_000;
+        const total = e.total || 3_500_000;
         store.set({ loadProgress: Math.min(0.98, e.loaded / total) });
       });
       if (this.disposed) return;
@@ -184,7 +184,7 @@ export class Game {
         const map = old.map;
         if (map) map.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
         // Unlit: the scan already has its lighting baked in. Vertex colours carry the
-        // exposure fix for the dark hallway (0.2 == unchanged, hence the x5 here).
+        // lighting fix that evens out exposure between rooms (0.2 == unchanged, hence the x5 here).
         const mat = new THREE.MeshBasicMaterial({ map, vertexColors: true, side: THREE.FrontSide });
         mat.color.setRGB(5, 5, 5);
         mat.clippingPlanes = [this.clip];
