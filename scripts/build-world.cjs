@@ -79,7 +79,8 @@ n2=Pa.length/3;P=new Float32Array(Pa);UV=new Float32Array(UVa);COL=new Uint8Arra
 }
 const tex0=g.bin.slice(g.json.bufferViews[g.json.images[0].bufferView].byteOffset||0,(g.json.bufferViews[g.json.images[0].bufferView].byteOffset||0)+g.json.bufferViews[g.json.images[0].bufferView].byteLength);
 // slightly richer colour and contrast for a more illustrated feel
-const texStyled=await sharp(tex0,{limitInputPixels:false}).resize(4096,4096,{kernel:'lanczos3'}).modulate({saturation:1.14}).linear(1.04,-4).jpeg({quality:92}).toBuffer();
+let texPipe=sharp(tex0,{limitInputPixels:false});if(MEDIAN>1)texPipe=texPipe.median(MEDIAN); // flattens fine scan noise into soft, brush-like patches
+const texStyled=await texPipe.resize(4096,4096,{kernel:'lanczos3'}).modulate({saturation:1.14}).linear(1.04,-4).jpeg({quality:92}).toBuffer();
 // lighting field: how bright/what tint each part of the apartment was captured at
 const LS=1024;const {data:ld}=await sharp(tex0,{limitInputPixels:false}).resize(LS,LS).removeAlpha().raw().toBuffer({resolveWithObject:true});
 const LC=0.5,LX0=-12.5,LZ0=-4.5,LNX=48,LNZ=19;const cellS=Array.from({length:LNX*LNZ},()=>[]);

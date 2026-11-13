@@ -32,6 +32,7 @@ export type HudState = {
   wallsUp: boolean;
   follow: boolean;
   sound: boolean;
+  ink: boolean;
   pizzaCooldown: number;
   toasts: Toast[];
 };
@@ -61,6 +62,7 @@ const initial: HudState = {
   wallsUp: false,
   follow: false,
   sound: true,
+  ink: true,
   pizzaCooldown: 0,
   toasts: [],
 };

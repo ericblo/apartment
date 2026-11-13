@@ -60,15 +60,105 @@ const WALK_SPEED = 1.9;
 const MAX_BUNNIES = 12;
 const WORLD = { cx: -0.4, cz: 0.35, w: 24, d: 9.3 };
 
+/**
+ * Illustration pass: draws the scene to a texture, then adds thin ink lines where depth
+ * jumps (object and wall edges) and gently flattens tones, so the scan reads a little
+ * more like a drawing while the real textures stay recognisable.
+ */
+class Ink {
+  private target: THREE.WebGLRenderTarget;
+  private scene = new THREE.Scene();
+  private cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  private mat: THREE.ShaderMaterial;
+
+  constructor() {
+    // dense screens already hide jagged edges, so skip multisampling there to stay fast on phones
+    const samples = typeof window !== "undefined" && window.devicePixelRatio > 1.5 ? 0 : 4;
+    this.target = new THREE.WebGLRenderTarget(2, 2, { samples, type: THREE.HalfFloatType });
+    this.target.depthTexture = new THREE.DepthTexture(2, 2);
+    this.mat = new THREE.ShaderMaterial({
+      uniforms: {
+        tColor: { value: this.target.texture },
+        tDepth: { value: this.target.depthTexture },
+        texel: { value: new THREE.Vector2(1, 1) },
+        near: { value: 0.5 },
+        far: { value: 160 },
+        ink: { value: new THREE.Color(0x3b2a22) },
+        amt: { value: 1 },
+      },
+      vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+      fragmentShader: `
+        varying vec2 vUv;
+        uniform sampler2D tColor; uniform sampler2D tDepth;
+        uniform vec2 texel; uniform float near; uniform float far; uniform vec3 ink; uniform float amt;
+        float lin(vec2 uv){ float d = texture2D(tDepth, uv).x; return near * far / (far - d * (far - near)); }
+        void main(){
+          vec4 c = texture2D(tColor, vUv);
+          float z = lin(vUv);
+          // second difference of depth: ignores smooth slopes, fires on steps
+          float e = abs(lin(vUv + vec2(texel.x, 0.0)) + lin(vUv - vec2(texel.x, 0.0)) - 2.0 * z)
+                  + abs(lin(vUv + vec2(0.0, texel.y)) + lin(vUv - vec2(0.0, texel.y)) - 2.0 * z);
+          float edge = smoothstep(0.012, 0.05, e / z) * step(z, far * 0.9) * amt;
+          vec3 rgb = c.a > 0.001 ? c.rgb / c.a : c.rgb;
+          // soft tone steps (kept subtle so photos still look like photos)
+          float l = dot(rgb, vec3(0.299, 0.587, 0.114));
+          float q = pow(floor(pow(l, 0.4545) * 9.0 + 0.5) / 9.0, 2.2);
+          rgb *= mix(1.0, (q + 0.02) / (l + 0.02), 0.35 * amt);
+          rgb = mix(vec3(dot(rgb, vec3(0.299, 0.587, 0.114))), rgb, 1.0 + 0.1 * amt);
+          rgb = mix(rgb, ink, edge * 0.7);
+          float a = max(c.a, edge * 0.7);
+          gl_FragColor = vec4(rgb, a);
+          #include <colorspace_fragment>
+          gl_FragColor.rgb *= a;
+        }`,
+      depthTest: false,
+      depthWrite: false,
+      blending: THREE.NoBlending,
+    });
+    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.mat);
+    quad.frustumCulled = false;
+    this.scene.add(quad);
+  }
+
+  setAmount(a: number) {
+    this.mat.uniforms.amt.value = a;
+  }
+
+  setSize(w: number, h: number, ratio: number) {
+    const pw = Math.max(2, Math.floor(w * ratio));
+    const ph = Math.max(2, Math.floor(h * ratio));
+    this.target.setSize(pw, ph);
+    // line weight of about 1.2 CSS pixels
+    (this.mat.uniforms.texel.value as THREE.Vector2).set((0.6 * ratio) / pw, (0.6 * ratio) / ph);
+  }
+
+  render(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera) {
+    this.mat.uniforms.near.value = camera.near;
+    this.mat.uniforms.far.value = camera.far;
+    renderer.setRenderTarget(this.target);
+    renderer.clear();
+    renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+    renderer.render(this.scene, this.cam);
+  }
+
+  dispose() {
+    this.target.depthTexture?.dispose();
+    this.target.dispose();
+    this.mat.dispose();
+  }
+}
+
 export class Game {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
-  private camera = new THREE.PerspectiveCamera(32, 1, 0.1, 200);
+  private camera = new THREE.PerspectiveCamera(32, 1, 0.5, 160);
   private controls: OrbitControls;
   private clock = new THREE.Clock();
   private raf = 0;
   private disposed = false;
   private ro: ResizeObserver;
+  private post = new Ink();
   private clip = new THREE.Plane(new THREE.Vector3(0, -1, 0), WALL_LOW);
   private wallTarget = WALL_LOW;
 
@@ -419,6 +509,12 @@ export class Game {
     store.set({ wallsUp: up });
   }
 
+  toggleInk() {
+    const on = !store.get().ink;
+    this.post.setAmount(on ? 1 : 0);
+    store.set({ ink: on });
+  }
+
   toggleFollow() {
     this.follow = !this.follow;
     store.set({ follow: this.follow });
@@ -464,6 +560,7 @@ export class Game {
         mat.dispose();
       }
     });
+    this.post.dispose();
     this.renderer.dispose();
   }
 
@@ -474,6 +571,7 @@ export class Game {
     const w = p?.clientWidth || window.innerWidth;
     const h = p?.clientHeight || window.innerHeight;
     this.renderer.setSize(w, h, false);
+    this.post.setSize(w, h, this.renderer.getPixelRatio());
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   }
@@ -1087,7 +1185,7 @@ export class Game {
     this.guy.update(this.started ? dt : real);
     this.updateFx(real, dt);
     this.updateCamera(Math.min(0.25, raw));
-    this.renderer.render(this.scene, this.camera);
+    this.post.render(this.renderer, this.scene, this.camera);
     this.updateOverlay(real);
 
     this.hudT += real;

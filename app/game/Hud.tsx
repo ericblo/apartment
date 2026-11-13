@@ -196,6 +196,9 @@ export default function Hud({ engine }: { engine: Engine | null }) {
         <button type="button" className={hud.wallsUp ? "on" : ""} onClick={() => engine.toggleWalls()} title="Walls up / down">
           🧱
         </button>
+        <button type="button" className={hud.ink ? "on" : ""} onClick={() => engine.toggleInk()} title="Illustrated look on / off">
+          🎨
+        </button>
         <button type="button" className={hud.follow ? "on" : ""} onClick={() => engine.toggleFollow()} title="Follow him">
           🎥
         </button>

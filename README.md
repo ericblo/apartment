@@ -19,6 +19,7 @@ Then open http://localhost:3000/apartment.
 ## How it is put together
 
 - `app/game/engine.ts` — three.js scene, camera, chores, needs, mess and effects.
+- The `Ink` class in `engine.ts` is the illustration pass (thin outlines, softened tones); the 🎨 button toggles it.
 - `app/game/character.ts` — the roommate, built from primitives and animated in code.
 - `app/game/nav.ts` + `nav.json` — walkable-floor grid baked from the scan, with A* pathfinding.
 - `app/game/data.ts` — where things are in the apartment and what can be done there.
