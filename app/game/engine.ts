@@ -273,6 +273,8 @@ export class Game {
     this.ro.observe(canvas.parentElement ?? canvas);
     this.resize();
 
+    this.toggleInk(); // open in the video game look; the palette button switches to the scan
+
     void this.load();
     this.loop();
   }
