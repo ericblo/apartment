@@ -8,6 +8,7 @@ import { findPath, nearestWalkable, randomWalkable, type Pt } from "./nav";
 import { store, type ChoreId, type QueueItem } from "./store";
 import { sfx } from "./audio";
 import { buildStylized } from "./stylized";
+import { Party, ROOMMATE_SPOT } from "./party";
 import {
   ACTIONS,
   BASE_PATH,
@@ -164,6 +165,10 @@ export class Game {
   private gameWorld: ReturnType<typeof buildStylized> | null = null;
   private gameLook = false;
   private sun!: THREE.DirectionalLight;
+  private hemi!: THREE.HemisphereLight;
+  private party!: Party;
+  private partyLeft = 0;
+  private scanMats: THREE.MeshBasicMaterial[] = [];
   private clip = new THREE.Plane(new THREE.Vector3(0, -1, 0), WALL_LOW);
   private wallTarget = WALL_LOW;
 
@@ -230,7 +235,9 @@ export class Game {
     this.controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
     this.controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
 
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0xb59c88, 1.25));
+    this.hemi = new THREE.HemisphereLight(0xffffff, 0xb59c88, 1.25);
+    this.scene.add(this.hemi);
+    this.party = new Party(this.scene, overlay, (glyph, at) => this.spawn(glyph, at, { spread: 0.3, up: 0.6, life: 1.3, size: 0.22 }));
     const sun = new THREE.DirectionalLight(0xfff0dc, 1.5);
     sun.position.set(5, 10, 6);
     // soft shadows for the stylised apartment; static, so the map is only redrawn on demand
@@ -301,6 +308,7 @@ export class Game {
         const mat = new THREE.MeshBasicMaterial({ map, vertexColors: true, side: THREE.FrontSide });
         mat.color.setRGB(5, 5, 5);
         mat.clippingPlanes = [this.clip];
+        this.scanMats.push(mat);
         m.material = mat;
         old.dispose();
       });
@@ -554,7 +562,39 @@ export class Game {
   toggleSound() {
     const on = !store.get().sound;
     sfx.setEnabled(on);
+    sfx.party(on && this.party.active);
     store.set({ sound: on });
+  }
+
+  /** Throw a party (or send everyone home). */
+  toggleParty() {
+    if (!this.started) return;
+    if (this.party.active) return this.endParty();
+    this.party.start();
+    this.partyLeft = 75;
+    sfx.party(true);
+    this.toast("🎉 Party time! Everyone's coming over");
+    this.queue = [];
+    if (this.running) this.cancelRunning(true);
+    this.idleT = 99; // join in straight away
+    this.say("PARTY!!", 2.2);
+    this.tweenCamera(new THREE.Vector3(-4.6, 0, -0.4), 15);
+    store.set({ party: true });
+  }
+
+  private endParty() {
+    this.party.stop();
+    sfx.party(false);
+    if (this.running?.def.id === "party") this.cancelRunning(true);
+    this.say("Best. Night. Ever.", 3);
+    // the morning after
+    this.dirt.dishes = Math.min(1, this.dirt.dishes + 0.4);
+    this.dirt.trash = Math.min(1, this.dirt.trash + 0.45);
+    this.dirt.floors = Math.min(1, this.dirt.floors + 0.35);
+    this.fun = 1;
+    this.energy = Math.max(0.1, this.energy - 0.25);
+    this.toast("Party's over. The place is a mess.");
+    store.set({ party: false, partyLeft: 0 });
   }
 
   rotate(dir: number) {
@@ -591,6 +631,8 @@ export class Game {
         mat.dispose();
       }
     });
+    this.party.dispose();
+    sfx.party(false);
     this.post.dispose();
     this.renderer.dispose();
   }
@@ -974,6 +1016,22 @@ export class Game {
         return [walk(arg ?? [this.pos.x, this.pos.z])];
       case "wander":
         return [walk(randomWalkable()), { t: "act", anim: "idle", dur: 2.5 }];
+      case "party": {
+        const [sx, , sz] = this.snap(ROOMMATE_SPOT);
+        return [
+          walk(ROOMMATE_SPOT),
+          {
+            t: "act",
+            anim: "dance",
+            dur: 1e8, // until the party ends
+            face: Math.atan2(-4.2 - sx, 0.4 - sz),
+            tick: (dt) => {
+              this.fun = Math.min(1, this.fun + dt * 0.06);
+              this.emit("🎶", this.guy.headWorld(this.tmp), 0.5, dt, { spread: 0.2, up: 0.5, life: 1.3, size: 0.2 });
+            },
+          },
+        ];
+      }
     }
   }
 
@@ -1010,6 +1068,7 @@ export class Game {
 
   /** What he gets up to when nobody is bossing him around. */
   private autonomy(): ActionId | null {
+    if (this.party.active) return "party";
     if (this.idleT < 4.5) return null;
     this.idleT = 0;
     if (this.energy < 0.3) return "nap";
@@ -1215,6 +1274,7 @@ export class Game {
     this.guy.root.position.copy(this.pos);
     this.guy.update(this.started ? dt : real);
     this.updateFx(real, dt);
+    this.updateParty(real, dt);
     this.updateCamera(Math.min(0.25, raw));
     if (this.gameLook) this.gameWorld?.update(this.clip.constant, this.camera.position);
     if (this.gameLook) this.post.render(this.renderer, this.scene, this.camera);
@@ -1230,6 +1290,10 @@ export class Game {
 
   private simulate(dt: number) {
     this.minutes += dt;
+    if (this.party.active) {
+      this.partyLeft -= dt;
+      if (this.partyLeft <= 0) this.endParty();
+    }
     this.pizzaCd = Math.max(0, this.pizzaCd - dt);
 
     const r = this.running;
@@ -1307,6 +1371,22 @@ export class Game {
     const c = this.clip.constant;
     if (Math.abs(c - this.wallTarget) > 0.002) this.clip.constant = c + (this.wallTarget - c) * (1 - Math.exp(-real * 7));
 
+  }
+
+  private updateParty(real: number, dt: number) {
+    const p = this.party;
+    if (!this.started || (!p.active && p.mix === 0 && !p.busy)) return;
+    p.update(dt, real);
+    // house lights down, colour up
+    const k = p.mix;
+    this.hemi.intensity = 1.25 - 0.7 * k;
+    this.sun.intensity = 1.5 - 1.2 * k;
+    this.hemi.color.setRGB(1 - 0.35 * k, 1 - 0.5 * k, 1);
+    // the scan is unlit, so it gets a slow colour wash instead
+    const wash = new THREE.Color().setHSL((this.clock.elapsedTime * 0.12) % 1, 0.85, 0.6);
+    const pulse = 0.85 + 0.15 * Math.abs(Math.sin(this.clock.elapsedTime * 6.6));
+    for (const m of this.scanMats)
+      m.color.setRGB(5 * (1 + k * (wash.r * 0.95 * pulse - 0.55)), 5 * (1 + k * (wash.g * 0.95 * pulse - 0.55)), 5 * (1 + k * (wash.b * 0.95 * pulse - 0.55)));
   }
 
   private updateCamera(real: number) {
@@ -1388,6 +1468,7 @@ export class Game {
       this.bubbleT -= real;
       if (this.bubbleT <= 0) this.bubble.classList.remove("show");
     }
+    this.party.updateTags((v) => this.project(v));
     const head = this.guy.headWorld(new THREE.Vector3());
     const [bx, by] = this.project(head);
     this.bubble.style.transform = `translate3d(${bx.toFixed(1)}px, ${by.toFixed(1)}px, 0)`;
@@ -1430,6 +1511,8 @@ export class Game {
       clock,
       day: 1 + Math.floor(m / 1440),
       pizzaCooldown: this.pizzaCd,
+      party: this.party.active,
+      partyLeft: Math.max(0, this.partyLeft),
       currentUid: r && !r.auto ? r.uid : null,
     });
   }

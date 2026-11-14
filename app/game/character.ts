@@ -19,7 +19,8 @@ export type Anim =
   | "keys"
   | "eat"
   | "shrug"
-  | "cheer";
+  | "cheer"
+  | "dance";
 
 export type Prop = "none" | "sponge" | "vacuum" | "can" | "bag" | "pizza";
 
@@ -66,6 +67,10 @@ const HAIR = 0x4a3324;
 const TEE = 0xf7f4ee;
 const SHORTS = 0x1c1c22;
 
+/** How a character looks. The roommate uses the defaults; party guests vary them. */
+export type Look = { skin: number; hair: number; tee: number; shorts: number; stripes: boolean; longHair: boolean; scale: number };
+const DEFAULT_LOOK: Look = { skin: SKIN, hair: HAIR, tee: TEE, shorts: SHORTS, stripes: true, longHair: false, scale: 1 };
+
 export class Character {
   root = new THREE.Group(); // position + heading
   private tiltG = new THREE.Group(); // lying down
@@ -95,7 +100,14 @@ export class Character {
   private walkPhase = 0;
   speedFactor = 1;
 
-  constructor() {
+  /** 0-2: which dance this character does, and where in the beat they start. */
+  danceStyle = 0;
+  dancePhase = 0;
+  private look: Look;
+
+  constructor(look: Partial<Look> = {}) {
+    this.look = { ...DEFAULT_LOOK, ...look };
+    this.tiltG.scale.setScalar(this.look.scale);
     this.root.add(this.tiltG);
     this.tiltG.add(this.body);
     this.props = this.buildModel();
@@ -111,10 +123,11 @@ export class Character {
 
   private buildModel() {
     const mat = (c: number) => new THREE.MeshLambertMaterial({ color: c });
-    const skin = mat(SKIN);
-    const tee = mat(TEE);
-    const shorts = mat(SHORTS);
-    const white = mat(0xffffff);
+    const L = this.look;
+    const skin = mat(L.skin);
+    const tee = mat(L.tee);
+    const shorts = mat(L.shorts);
+    const white = mat(L.stripes ? 0xffffff : L.shorts);
     const add = (parent: THREE.Object3D, geo: THREE.BufferGeometry, m: THREE.Material, x = 0, y = 0, z = 0) => {
       const mesh = new THREE.Mesh(geo, m);
       mesh.position.set(x, y, z);
@@ -159,12 +172,16 @@ export class Character {
     const hair = add(
       this.head,
       new THREE.SphereGeometry(0.158, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.52),
-      mat(HAIR),
+      mat(L.hair),
       0,
       0.145,
       -0.012
     );
     hair.rotation.x = -0.28;
+    if (L.longHair) {
+      const back = add(this.head, new THREE.CapsuleGeometry(0.13, 0.2, 6, 14), mat(L.hair), 0, 0.02, -0.07);
+      back.scale.set(1.15, 1, 0.6);
+    }
     const dark = mat(0x2a211c);
     for (const s of [-1, 1]) {
       add(this.head, new THREE.SphereGeometry(0.019, 10, 8), dark, 0.055 * s, 0.14, 0.136);
@@ -427,6 +444,45 @@ export class Character {
         p.kneeL = 0.2 * Math.abs(sin(t * 8 + 1.5));
         p.kneeR = p.kneeL;
         break;
+      case "dance": {
+        const b = t * 6.6 + this.dancePhase; // half-time sway; the bounce runs at double this
+        p.lift = 0.05 * Math.abs(sin(b));
+        p.kneeL = 0.25 + 0.25 * Math.max(0, sin(b));
+        p.kneeR = 0.25 + 0.25 * Math.max(0, -sin(b));
+        p.hipL = -0.12 - 0.12 * Math.max(0, sin(b));
+        p.hipR = -0.12 - 0.12 * Math.max(0, -sin(b));
+        p.headX = 0.12 * sin(b * 2);
+        if (this.danceStyle === 0) {
+          // fist pumps
+          p.shL = -2.4 + 0.5 * sin(b * 2);
+          p.shR = -2.4 - 0.5 * sin(b * 2);
+          p.elL = -0.9;
+          p.elR = -0.9;
+          p.twist = 0.25 * sin(b);
+        } else if (this.danceStyle === 1) {
+          // side-to-side groove
+          p.shL = -0.7 + 0.3 * sin(b);
+          p.shR = -0.7 - 0.3 * sin(b);
+          p.shLz = 0.35;
+          p.shRz = 0.35;
+          p.elL = -1.5;
+          p.elR = -1.5;
+          p.twist = 0.5 * sin(b);
+          p.torso = 0.08;
+          p.headY = 0.3 * sin(b);
+        } else {
+          // one arm in the air
+          p.shR = -2.8;
+          p.shRz = 0.25 + 0.35 * sin(b * 2);
+          p.elR = -0.3;
+          p.shL = -0.3;
+          p.shLz = 0.5;
+          p.elL = -1.2 + 0.3 * sin(b * 2);
+          p.twist = 0.3 * sin(b);
+          p.torso = -0.05;
+        }
+        break;
+      }
     }
     this.target = p;
 

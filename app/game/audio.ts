@@ -30,9 +30,34 @@ function tone(freq: number, dur: number, type: OscillatorType, vol: number, dela
   o.stop(t0 + dur + 0.02);
 }
 
+let partyTimer: number | null = null;
+let partyStep = 0;
+const BASS = [55, 55, 0, 55, 0, 65.4, 0, 55, 73.4, 0, 55, 0, 65.4, 0, 49, 0];
+
+function partyTick() {
+  const s = partyStep++ % 16;
+  if (s % 4 === 0) tone(150, 0.17, "sine", 0.24, 0, 46); // kick
+  if (s % 4 === 2) tone(7000, 0.03, "square", 0.012); // hat
+  if (BASS[s]) tone(BASS[s] * 2, 0.11, "sawtooth", 0.035);
+  if (s === 0 || s === 10) [220, 277.2, 329.6].forEach((f) => tone(f * 2, 0.22, "triangle", 0.022));
+}
+
+function stopParty() {
+  if (partyTimer !== null) window.clearInterval(partyTimer);
+  partyTimer = null;
+}
+
 export const sfx = {
   setEnabled(on: boolean) {
     enabled = on;
+    if (!on) stopParty();
+  },
+  /** A simple four-on-the-floor loop at 124 bpm while the party is on. */
+  party(on: boolean) {
+    if (!on || !enabled) return stopParty();
+    if (partyTimer !== null || !ac()) return;
+    partyStep = 0;
+    partyTimer = window.setInterval(partyTick, 121);
   },
   click() {
     tone(660, 0.07, "triangle", 0.08);

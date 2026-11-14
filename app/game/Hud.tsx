@@ -70,6 +70,14 @@ function Intro({ engine }: { engine: Engine | null }) {
 
 export default function Hud({ engine }: { engine: Engine | null }) {
   const hud = useHud();
+  const partying = hud.party;
+  useEffect(() => {
+    // the page backdrop goes dark while the party is on
+    document.body.dataset.party = partying ? "1" : "0";
+    return () => {
+      delete document.body.dataset.party;
+    };
+  }, [partying]);
   if (hud.phase !== "playing" || !engine) return <Intro engine={engine} />;
 
   const pct = Math.round(hud.cleanliness * 100);
@@ -224,6 +232,15 @@ export default function Hud({ engine }: { engine: Engine | null }) {
           >
             <span className="dock-icon">🍕</span>
             <span className="dock-label">{hud.pizzaCooldown > 0 ? `Pizza in ${Math.ceil(hud.pizzaCooldown)}s` : "Bribe with pizza"}</span>
+          </button>
+          <button
+            type="button"
+            className={`dock-btn party${hud.party ? " on" : ""}`}
+            onClick={() => engine.toggleParty()}
+            title="Friends come over, the lights go disco, everybody dances"
+          >
+            <span className="dock-icon">{hud.party ? "🚪" : "🎉"}</span>
+            <span className="dock-label">{hud.party ? `End the party (${Math.ceil(hud.partyLeft)}s)` : "Throw a party"}</span>
           </button>
         </div>
       </section>

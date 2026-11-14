@@ -13,7 +13,8 @@ export type ActionId =
   | "snack"
   | "pizza"
   | "walk"
-  | "wander";
+  | "wander"
+  | "party";
 
 export type ActionDef = {
   id: ActionId;
@@ -37,6 +38,7 @@ export const ACTIONS: Record<ActionId, ActionDef> = {
   pizza: { id: "pizza", label: "Pizza bribe", icon: "🍕", kind: "fun", doing: "Eating bribe pizza" },
   walk: { id: "walk", label: "Walk here", icon: "👣", kind: "move", doing: "Walking" },
   wander: { id: "wander", label: "Wander", icon: "🚶", kind: "move", doing: "Wandering about" },
+  party: { id: "party", label: "Dance", icon: "🎉", kind: "fun", doing: "Tearing up the dance floor" },
 };
 
 export const CHORES: ChoreId[] = ["dishes", "floors", "plants", "trash", "bed", "stove"];

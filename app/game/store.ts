@@ -33,6 +33,8 @@ export type HudState = {
   follow: boolean;
   sound: boolean;
   ink: boolean;
+  party: boolean;
+  partyLeft: number;
   pizzaCooldown: number;
   toasts: Toast[];
 };
@@ -63,6 +65,8 @@ const initial: HudState = {
   follow: false,
   sound: true,
   ink: false,
+  party: false,
+  partyLeft: 0,
   pizzaCooldown: 0,
   toasts: [],
 };

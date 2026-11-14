@@ -36,6 +36,20 @@ body {
   user-select: none;
 }
 
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(120% 85% at 50% 12%, #4b2a78 0%, #24153f 55%, #120a22 100%);
+  opacity: 0;
+  transition: opacity 1.4s;
+  pointer-events: none;
+}
+body[data-party="1"]::after {
+  opacity: 1;
+}
+
 button {
   font: inherit;
   color: inherit;
@@ -213,6 +227,23 @@ input:focus-visible {
 .bubble.show {
   opacity: 1;
   scale: 1;
+}
+
+/* party guests' name tags */
+.nametag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  translate: -50% calc(-100% - 4px);
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 2px solid var(--ink);
+  background: var(--mustard);
+  font-family: var(--font-d);
+  font-weight: 600;
+  font-size: 12.5px;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 /* ---------- intro ---------- */
@@ -698,6 +729,13 @@ input:focus-visible {
 }
 .dock-btn.bribe {
   background: #ffe2c4;
+}
+.dock-btn.party {
+  background: linear-gradient(100deg, #ffd1e8, #d9d2ff 55%, #c9f0ff);
+}
+.dock-btn.party.on {
+  background: var(--ink);
+  color: var(--paper);
 }
 .dock-btn:disabled {
   opacity: 0.55;
