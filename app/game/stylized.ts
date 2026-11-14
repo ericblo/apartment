@@ -556,7 +556,6 @@ function furnish(b: Builder) {
   const LIGHTWOOD = 0xcfa663;
   const BLACK = 0x26262b;
   const STEEL = 0xb3b8bd;
-  const WHITE = 0xf2efe8;
 
   // ---------- west bedroom
   b.bed(-9.8, -7.95, -3.5, -2.25, "e", { frame: 0xd8d2c6, sheet: 0xf3f0ea, duvet: 0xfbfaf6, pillow: 0xffffff, h: 0.62 });
