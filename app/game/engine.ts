@@ -7,6 +7,7 @@ import { Character, type Anim, type Prop } from "./character";
 import { findPath, nearestWalkable, randomWalkable, type Pt } from "./nav";
 import { store, type ChoreId, type QueueItem } from "./store";
 import { sfx } from "./audio";
+import { buildStylized } from "./stylized";
 import {
   ACTIONS,
   BASE_PATH,
@@ -159,6 +160,10 @@ export class Game {
   private disposed = false;
   private ro: ResizeObserver;
   private post = new Ink();
+  private scanWorld = new THREE.Group();
+  private gameWorld: ReturnType<typeof buildStylized> | null = null;
+  private gameLook = false;
+  private sun!: THREE.DirectionalLight;
   private clip = new THREE.Plane(new THREE.Vector3(0, -1, 0), WALL_LOW);
   private wallTarget = WALL_LOW;
 
@@ -228,7 +233,23 @@ export class Game {
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0xb59c88, 1.25));
     const sun = new THREE.DirectionalLight(0xfff0dc, 1.5);
     sun.position.set(5, 10, 6);
+    // soft shadows for the stylised apartment; static, so the map is only redrawn on demand
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -14;
+    sun.shadow.camera.right = 14;
+    sun.shadow.camera.top = 9;
+    sun.shadow.camera.bottom = -9;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 30;
+    sun.shadow.bias = -0.0006;
+    sun.shadow.normalBias = 0.03;
+    sun.shadow.autoUpdate = false;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.sun = sun;
     this.scene.add(sun);
+    this.scene.add(this.scanWorld);
 
     this.bubble = document.createElement("div");
     this.bubble.className = "bubble";
@@ -281,7 +302,7 @@ export class Game {
         m.material = mat;
         old.dispose();
       });
-      this.scene.add(gltf.scene);
+      this.scanWorld.add(gltf.scene);
       store.set({ loadProgress: 1, phase: "intro" });
     } catch (err) {
       store.set({ loadError: err instanceof Error ? err.message : "Could not load the apartment." });
@@ -298,7 +319,7 @@ export class Game {
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(WORLD.cx, -0.015, WORLD.cz);
-    this.scene.add(floor);
+    this.scanWorld.add(floor);
 
     const shadowTex = tl.load(`${BASE_PATH}/world/shadow.png`);
     const shadow = new THREE.Mesh(
@@ -509,9 +530,17 @@ export class Game {
     store.set({ wallsUp: up });
   }
 
+  /** Switch between the real scan and the hand-built video game version of the apartment. */
   toggleInk() {
-    const on = !store.get().ink;
-    this.post.setAmount(on ? 1 : 0);
+    const on = !this.gameLook;
+    if (on && !this.gameWorld) {
+      this.gameWorld = buildStylized(this.clip);
+      this.scene.add(this.gameWorld.group);
+    }
+    this.gameLook = on;
+    if (this.gameWorld) this.gameWorld.group.visible = on;
+    this.scanWorld.visible = !on;
+    this.sun.shadow.needsUpdate = true;
     store.set({ ink: on });
   }
 
@@ -1185,7 +1214,9 @@ export class Game {
     this.guy.update(this.started ? dt : real);
     this.updateFx(real, dt);
     this.updateCamera(Math.min(0.25, raw));
-    this.post.render(this.renderer, this.scene, this.camera);
+    if (this.gameLook) this.gameWorld?.update(this.clip.constant, this.camera.position);
+    if (this.gameLook) this.post.render(this.renderer, this.scene, this.camera);
+    else this.renderer.render(this.scene, this.camera);
     this.updateOverlay(real);
 
     this.hudT += real;
@@ -1273,6 +1304,7 @@ export class Game {
 
     const c = this.clip.constant;
     if (Math.abs(c - this.wallTarget) > 0.002) this.clip.constant = c + (this.wallTarget - c) * (1 - Math.exp(-real * 7));
+
   }
 
   private updateCamera(real: number) {

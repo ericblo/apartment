@@ -62,7 +62,7 @@ const initial: HudState = {
   wallsUp: false,
   follow: false,
   sound: true,
-  ink: true,
+  ink: false,
   pizzaCooldown: 0,
   toasts: [],
 };

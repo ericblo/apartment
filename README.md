@@ -19,7 +19,8 @@ Then open http://localhost:3000/apartment.
 ## How it is put together
 
 - `app/game/engine.ts` — three.js scene, camera, chores, needs, mess and effects.
-- The `Ink` class in `engine.ts` is the illustration pass (thin outlines, softened tones); the 🎨 button toggles it.
+- `app/game/stylized.ts` — the hand-built "video game" version of the apartment (floor plan, walls, furniture, rugs, plants), measured from the scan. The 🎨 button switches between it and the real scan.
+- The `Ink` class in `engine.ts` adds thin outlines in the video game look.
 - `app/game/character.ts` — the roommate, built from primitives and animated in code.
 - `app/game/nav.ts` + `nav.json` — walkable-floor grid baked from the scan, with A* pathfinding.
 - `app/game/data.ts` — where things are in the apartment and what can be done there.
@@ -32,7 +33,7 @@ Then open http://localhost:3000/apartment.
 squares the scan up to the axes, removes the ceiling, a mirror "ghost room" and
 floating fragments, lifts the roommate and his bedding out of the mesh, fills small
 holes, smooths bumpy surfaces, flattens the floor, evens out lighting and tint between
-rooms, enriches the colours, and bakes the floor fill, shadow and walkable grid.
+rooms, and bakes the floor fill, shadow and walkable grid.
 
 ```bash
 npm i --no-save sharp pngjs @gltf-transform/cli

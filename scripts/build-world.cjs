@@ -24,7 +24,7 @@ const cnt=new Map();for(let t=0;t<nt;t++){if(!keep[t])continue;const r=find(rep[
 let dropped=0;for(let t=0;t<nt;t++){if(keep[t]&&cnt.get(find(rep[idx[t*3]]))<120){keep[t]=0;dropped++;}}
 console.log('components',cnt.size,'dropped island tris',dropped);
 // compact
-const SMOOTH_ITERS=+(process.env.SMOOTH||10),MEDIAN=+(process.env.MEDIAN||3),EVEN=+(process.env.EVEN||0.6);
+const SMOOTH_ITERS=+(process.env.SMOOTH||10),MEDIAN=+(process.env.MEDIAN||1),EVEN=+(process.env.EVEN||0.6);
 const map=new Int32Array(nv).fill(-1);let n2=0;const nidx=[];
 for(let t=0;t<nt;t++){if(!keep[t])continue;for(let k=0;k<3;k++){const v=idx[t*3+k];if(map[v]<0)map[v]=n2++;nidx.push(map[v]);}}
 let P=new Float32Array(n2*3),UV=new Float32Array(n2*2),COL=new Uint8Array(n2*4);
