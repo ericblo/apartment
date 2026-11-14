@@ -20,7 +20,10 @@ export type Anim =
   | "eat"
   | "shrug"
   | "cheer"
-  | "dance";
+  | "dance"
+  | "twerk"
+  | "pogo"
+  | "chug";
 
 export type Prop = "none" | "sponge" | "vacuum" | "can" | "bag" | "pizza";
 
@@ -483,6 +486,57 @@ export class Character {
         }
         break;
       }
+      case "twerk": {
+        // bent over, hands on knees, hips doing all the work
+        const b = t * 15 + this.dancePhase;
+        p.torso = 1.0 + 0.16 * sin(b);
+        p.hipL = -0.85;
+        p.hipR = -0.85;
+        p.kneeL = 1.0 + 0.12 * sin(b);
+        p.kneeR = 1.0 + 0.12 * sin(b);
+        p.lift = -0.2 + 0.07 * sin(b);
+        p.twist = 0.14 * sin(b * 0.5);
+        p.shL = -0.75;
+        p.shR = -0.75;
+        p.shLz = 0.3;
+        p.shRz = 0.3;
+        p.elL = -0.35;
+        p.elR = -0.35;
+        p.headX = -0.75;
+        p.headY = 0.5 * sin(b * 0.25);
+        break;
+      }
+      case "pogo": {
+        // jumping up and down, arms everywhere, headbanging
+        const b = t * 9.5 + this.dancePhase;
+        p.lift = 0.28 * Math.abs(sin(b));
+        p.kneeL = 0.5 * Math.abs(Math.cos(b));
+        p.kneeR = p.kneeL;
+        p.hipL = -0.25 * Math.abs(Math.cos(b));
+        p.hipR = p.hipL;
+        p.shL = -2.7 + 0.5 * sin(b * 2.3);
+        p.shR = -2.7 + 0.5 * sin(b * 1.7 + 1);
+        p.shLz = 0.4 + 0.4 * sin(b * 1.3);
+        p.shRz = 0.4 + 0.4 * sin(b * 1.9 + 2);
+        p.elL = -0.4;
+        p.elR = -0.4;
+        p.headX = 0.45 * sin(b * 2);
+        p.torso = 0.15 * sin(b * 2);
+        break;
+      }
+      case "chug":
+        p.shR = -1.0;
+        p.shRz = -0.2;
+        p.elR = -2.15;
+        p.headX = -0.55;
+        p.torso = -0.2;
+        p.shL = -2.6;
+        p.shLz = 0.4;
+        p.elL = -0.3;
+        p.lift = 0.03 * Math.abs(sin(t * 8));
+        p.kneeL = 0.15;
+        p.kneeR = 0.15;
+        break;
     }
     this.target = p;
 

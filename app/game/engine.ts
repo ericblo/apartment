@@ -573,7 +573,7 @@ export class Game {
     this.party.start();
     this.partyLeft = 75;
     sfx.party(true);
-    this.toast("🎉 Party time! Everyone's coming over");
+    this.toast("🎉 Party time! Everyone's coming over. Lock up the valuables.");
     this.queue = [];
     if (this.running) this.cancelRunning(true);
     this.idleT = 99; // join in straight away
@@ -588,12 +588,14 @@ export class Game {
     if (this.running?.def.id === "party") this.cancelRunning(true);
     this.say("Best. Night. Ever.", 3);
     // the morning after
-    this.dirt.dishes = Math.min(1, this.dirt.dishes + 0.4);
-    this.dirt.trash = Math.min(1, this.dirt.trash + 0.45);
-    this.dirt.floors = Math.min(1, this.dirt.floors + 0.35);
+    this.dirt.dishes = 1;
+    this.dirt.trash = 1;
+    this.dirt.floors = 1;
+    this.dirt.stove = Math.min(1, this.dirt.stove + 0.5);
+    this.dirt.bed = 1;
     this.fun = 1;
     this.energy = Math.max(0.1, this.energy - 0.25);
-    this.toast("Party's over. The place is a mess.");
+    this.toast("Party's over. The place is DESTROYED.");
     store.set({ party: false, partyLeft: 0 });
   }
 
@@ -1027,7 +1029,13 @@ export class Game {
             face: Math.atan2(-4.2 - sx, 0.4 - sz),
             tick: (dt) => {
               this.fun = Math.min(1, this.fun + dt * 0.06);
-              this.emit("🎶", this.guy.headWorld(this.tmp), 0.5, dt, { spread: 0.2, up: 0.5, life: 1.3, size: 0.2 });
+              // he cycles through moves like everyone else
+              const moves = ["twerk", "pogo", "dance", "twerk", "chug"] as const;
+              const move = moves[Math.floor((this.running?.stepT ?? 0) / 3.5) % moves.length];
+              this.guy.setAnim(move);
+              const home = Math.atan2(-4.2 - sx, 0.4 - sz);
+              this.guy.face(move === "twerk" ? home + Math.PI : home);
+              this.emit(move === "twerk" ? "🍑" : move === "chug" ? "🍺" : "🔥", this.guy.headWorld(this.tmp), 0.9, dt, { spread: 0.2, up: 0.5, life: 1.3, size: 0.2 });
             },
           },
         ];

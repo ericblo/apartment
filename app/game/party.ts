@@ -14,6 +14,10 @@ export const GUESTS: GuestDef[] = [
   { name: "Sam", look: { hair: 0xd9b36a, tee: 0xf5f2ea, shorts: 0x7a1f1f, stripes: true, skin: 0xf0c3a0 } },
   { name: "Priya", look: { hair: 0x1a1210, tee: 0xff7a3d, shorts: 0x1f4a4a, stripes: false, longHair: true, scale: 0.9, skin: 0xb9794f } },
   { name: "Leo", look: { hair: 0x3a2a20, tee: 0x1c1c22, shorts: 0x8a8f96, stripes: false, scale: 1.02, skin: 0xd9a070 } },
+  { name: "Lea", look: { hair: 0xc9a25a, tee: 0x35c2c9, shorts: 0xf5f2ea, stripes: false, longHair: true, scale: 0.93, skin: 0xf2cdb0 } },
+  { name: "Mateo", look: { hair: 0x17110d, tee: 0xd63a2f, shorts: 0x23262d, stripes: true, scale: 1.03, skin: 0xc48a5e } },
+  { name: "Other Ian", look: { hair: 0x6e4a2a, tee: 0x9ad13b, shorts: 0x2f3a5f, stripes: false, scale: 0.98, skin: 0xf0c3a0 } },
+  { name: "Andrea", look: { hair: 0x4a2418, tee: 0xf06aa8, shorts: 0x151515, stripes: false, longHair: true, scale: 0.95, skin: 0xd9a070 } },
 ];
 
 /** Where guests come in and go out: the far end of the hallway. */
@@ -28,7 +32,27 @@ const SPOTS: Pt[] = [
   [-5.1, 1.6],
   [-3.7, -2.5],
   [-5.9, 2.0],
+  [-3.9, 0.2],
+  [-5.2, 0.9],
+  [-4.0, -1.5],
+  [-4.9, -2.8],
 ];
+/** Some guests end up dancing on the furniture: [x, height, z], by guest index. */
+const PERCH: Record<number, [number, number, number]> = {
+  2: [-5.58, 0.47, -1.05], // Alex, on the coffee table
+  5: [-6.85, 0.46, 0.4], // Sam, on the sectional
+  8: [-5.7, 0.42, -3.2], // Lea, on the loveseat
+  9: [-6.85, 0.46, -0.8], // Mateo, on the sectional
+};
+type Move = "dance" | "twerk" | "pogo" | "chug" | "spin";
+const MOVES: Move[] = ["twerk", "twerk", "twerk", "pogo", "pogo", "dance", "chug", "spin"];
+const MOVE_FX: Record<Move, string[]> = {
+  twerk: ["🍑", "🔥", "💦", "🥵"],
+  pogo: ["🤘", "🔥", "💥"],
+  dance: ["🎶", "✨", "💃", "🕺"],
+  chug: ["🍺", "🍻", "🥴"],
+  spin: ["🌀", "😵‍💫", "✨"],
+};
 export const ROOMMATE_SPOT: Pt = [-4.9, -0.4];
 const FLOOR_CENTRE = new THREE.Vector3(-4.8, 0, -0.5);
 const WALK = 2.3;
@@ -42,6 +66,10 @@ type Guest = {
   wait: number;
   spot: Pt;
   tag: HTMLDivElement;
+  perch: [number, number, number] | null;
+  move: Move;
+  moveT: number;
+  heading: number;
 };
 
 export class Party {
@@ -121,7 +149,9 @@ export class Party {
       tag.style.display = "none";
       this.overlay.appendChild(tag);
       const [dx, dz] = nearestWalkable(DOOR[0], DOOR[1]);
-      this.guests.push({ ch, name: def.name, pos: new THREE.Vector3(dx, 0, dz), path: null, state: "waiting", wait: 0.6 + i * 0.9, spot: SPOTS[i % SPOTS.length], tag });
+      const perch = PERCH[i] ?? null;
+      const spot: Pt = perch ? [perch[0], perch[2]] : SPOTS[i % SPOTS.length];
+      this.guests.push({ ch, name: def.name, pos: new THREE.Vector3(dx, 0, dz), path: null, state: "waiting", wait: 0.5 + i * 0.6, spot, tag, perch, move: "twerk", moveT: 0, heading: 0 });
     });
   }
 
@@ -135,8 +165,13 @@ export class Party {
         return;
       }
       g.state = "leaving";
-      g.wait = i * 0.35;
+      g.wait = i * 0.3;
       g.path = null;
+      if (g.perch) {
+        // hop down off the furniture
+        const [x, z] = nearestWalkable(g.pos.x, g.pos.z);
+        g.pos.set(x, 0, z);
+      }
     });
   }
 
@@ -169,7 +204,7 @@ export class Party {
     const col = new THREE.Color();
     this.lights.forEach((l, i) => {
       const u = l.userData as { x: number; z: number; ph: number };
-      col.setHSL((t * 0.13 + i * 0.19) % 1, 1, 0.55);
+      col.setHSL((t * 0.35 + i * 0.19) % 1, 1, 0.55);
       l.color.copy(col);
       const beat = 0.65 + 0.35 * Math.abs(Math.sin(t * 6.6 + u.ph));
       l.intensity = 7 * this.mix * beat;
@@ -178,13 +213,19 @@ export class Party {
     });
     this.spots.forEach((m, i) => {
       const u = m.userData as { ph: number; r: number; cx: number; cz: number };
-      const a = t * (0.7 + (i % 3) * 0.25) * (i % 2 ? 1 : -1) + u.ph;
+      const a = t * (1.6 + (i % 3) * 0.5) * (i % 2 ? 1 : -1) + u.ph;
       m.position.x = u.cx + Math.cos(a) * u.r;
       m.position.z = u.cz + Math.sin(a) * u.r * 0.8;
       const mat = m.material as THREE.MeshBasicMaterial;
       mat.color.setHSL((t * 0.2 + i * 0.137) % 1, 1, 0.5);
       mat.opacity = 0.42 * this.mix;
     });
+
+    // confetti and debris raining over the dance floor
+    if (this.active && Math.random() < real * 5) {
+      const junk = ["🎊", "🎉", "🍕", "🍺", "🧻", "🎊", "🥳", "🍾"];
+      this.fx(junk[Math.floor(Math.random() * junk.length)], this.tmp.set(FLOOR_CENTRE.x + (Math.random() - 0.5) * 5, 1.6 + Math.random() * 0.8, FLOOR_CENTRE.z + (Math.random() - 0.5) * 5));
+    }
 
     let anyone = false;
     for (const g of this.guests) {
@@ -227,8 +268,9 @@ export class Party {
           if (!g.path.length) {
             if (g.state === "arriving") {
               g.state = "dancing";
-              g.ch.setAnim("dance");
-              g.ch.face(Math.atan2(FLOOR_CENTRE.x - g.pos.x, FLOOR_CENTRE.z - g.pos.z));
+              if (g.perch) g.pos.set(...g.perch);
+              g.heading = Math.atan2(FLOOR_CENTRE.x - g.pos.x, FLOOR_CENTRE.z - g.pos.z);
+              g.moveT = 0;
             } else {
               g.state = "gone";
               g.ch.root.visible = false;
@@ -236,8 +278,22 @@ export class Party {
             }
           }
         }
-      } else if (g.state === "dancing" && Math.random() < dt * 0.25) {
-        this.fx(["🎶", "✨", "🎵", "💃", "🕺"][Math.floor(Math.random() * 5)], g.ch.headWorld(this.tmp));
+      } else if (g.state === "dancing") {
+        // everyone keeps switching moves; nobody stays civilised for long
+        g.moveT -= dt;
+        if (g.moveT <= 0) {
+          g.move = MOVES[Math.floor(Math.random() * MOVES.length)];
+          g.moveT = 2.5 + Math.random() * 3.5;
+          g.ch.danceStyle = Math.floor(Math.random() * 3);
+          // twerkers turn their backs to the room
+          g.ch.face(g.move === "twerk" ? g.heading + Math.PI : g.heading);
+          g.ch.setAnim(g.move === "spin" ? "pogo" : g.move);
+        }
+        if (g.move === "spin") g.ch.face(g.ch.heading + 2.4);
+        if (Math.random() < dt * 0.9) {
+          const fx = MOVE_FX[g.move];
+          this.fx(fx[Math.floor(Math.random() * fx.length)], g.ch.headWorld(this.tmp));
+        }
       }
       g.ch.root.position.copy(g.pos);
       g.ch.update(dt);
