@@ -24,7 +24,8 @@ export type Anim =
   | "twerk"
   | "pogo"
   | "chug"
-  | "type";
+  | "type"
+  | "limp";
 
 export type Prop = "none" | "sponge" | "vacuum" | "can" | "bag" | "pizza";
 
@@ -523,6 +524,24 @@ export class Character {
         p.elR = -0.4;
         p.headX = 0.45 * sin(b * 2);
         p.torso = 0.15 * sin(b * 2);
+        break;
+      }
+      case "limp": {
+        // a slow, lopsided hobble: one stiff leg, a hand on the hip
+        const w = this.walkPhase;
+        p.hipL = -0.5 * sin(w);
+        p.kneeL = Math.max(0, 0.7 * sin(w + 1.2));
+        p.hipR = 0.12 * sin(w);
+        p.kneeR = 0.05;
+        p.lift = -0.03 - 0.05 * Math.max(0, sin(w));
+        p.torso = 0.22;
+        p.twist = 0.18 * sin(w);
+        p.shL = 0.35 * sin(w);
+        p.elL = -0.3;
+        p.shR = 0.5;
+        p.shRz = 0.5;
+        p.elR = -1.6;
+        p.headX = 0.15;
         break;
       }
       case "type":

@@ -286,7 +286,7 @@ export default function Hud({ engine }: { engine: Engine | null }) {
             className={`dock-btn ericparty${hud.ericParty ? " on" : ""}`}
             disabled={hud.spinning}
             onClick={() => engine.toggleEricParty()}
-            title="Eric brings five friends back to the red bedroom"
+            title="Eric brings company back to the red bedroom"
           >
             <span className="dock-icon">{hud.ericParty ? "🚪" : "😈"}</span>
             <span className="dock-label">{hud.ericParty ? "Kick them out" : "Eric party"}</span>

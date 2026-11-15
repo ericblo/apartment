@@ -7,7 +7,7 @@ import { GUESTS } from "./party";
 import { FRONT_DOOR } from "./data";
 import { findPath, nearestWalkable, type Pt } from "./nav";
 
-type Walker = { ch: Character; pos: THREE.Vector3; path: Pt[] | null; tag: HTMLDivElement; delay: number };
+type Walker = { ch: Character; pos: THREE.Vector3; path: Pt[] | null; tag: HTMLDivElement; delay: number; limp?: boolean };
 
 type State =
   | "toDesk"
@@ -35,6 +35,9 @@ const GIRLS: { name: string; hair: number; tee: number; skin: number }[] = [
   { name: "Sofia", hair: 0x6e3a1e, tee: 0x8e44ad, skin: 0xe9b48f },
   { name: "Nina", hair: 0x151515, tee: 0xf5f2ea, skin: 0xa86f47 },
   { name: "Zoe", hair: 0xb5451d, tee: 0x35c2c9, skin: 0xf0c3a0 },
+  { name: "Romina", hair: 0x2a1a12, tee: 0xff7a3d, skin: 0xd9a070 },
+  { name: "Tess", hair: 0xc9a25a, tee: 0x2e8b57, skin: 0xf2cdb0 },
+  { name: "Ti", hair: 0x151515, tee: 0xf2c230, skin: 0xe9b48f },
 ];
 
 export class Eric {
@@ -121,8 +124,8 @@ export class Eric {
       return false;
     }
     if (!w.path || !w.path.length) return true;
-    w.ch.setAnim("walk");
-    let budget = WALK * dt;
+    w.ch.setAnim(w.limp ? "limp" : "walk");
+    let budget = WALK * (w.limp ? 0.5 : 1) * dt;
     while (budget > 0 && w.path.length) {
       const [tx, tz] = w.path[0];
       const dx = tx - w.pos.x;
@@ -178,7 +181,7 @@ export class Eric {
       const w = this.walker(g.name, new Character({ hair: g.hair, tee: g.tee, skin: g.skin, shorts: 0x1c1c22, stripes: false, longHair: true, scale: 0.9 + (i % 3) * 0.02 }));
       this.atDoor(w);
       w.delay = 0.5 + i * 0.45;
-      w.path = findPath([w.pos.x, w.pos.z], [ROOM_STAND[0] + (i - 2) * 0.35, ROOM_STAND[1] + (i % 2) * 0.3]);
+      w.path = findPath([w.pos.x, w.pos.z], [ROOM_STAND[0] + (i - (GIRLS.length - 1) / 2) * 0.27, ROOM_STAND[1] + (i % 2) * 0.3]);
       return w;
     });
     this.state = "partyIn";
@@ -200,11 +203,12 @@ export class Eric {
     this.me.ch.root.visible = true;
     this.me.tag.style.display = "";
     this.girls.forEach((w, i) => {
-      const [x, z] = nearestWalkable(ROOM_STAND[0] + (i - 2) * 0.3, ROOM_STAND[1]);
+      const [x, z] = nearestWalkable(ROOM_STAND[0] + (i - (GIRLS.length - 1) / 2) * 0.27, ROOM_STAND[1]);
+      w.limp = true; // nobody walks out of there quite the same
       w.pos.set(x, 0, z);
       w.ch.root.visible = true;
       w.tag.style.display = "";
-      w.delay = i * 0.4;
+      w.delay = i * 0.5;
       w.path = findPath([x, z], FRONT_DOOR);
     });
   }
