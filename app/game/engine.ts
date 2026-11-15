@@ -9,6 +9,7 @@ import { store, type ChoreId, type QueueItem } from "./store";
 import { sfx } from "./audio";
 import { buildStylized } from "./stylized";
 import { Party, ROOMMATE_SPOT } from "./party";
+import { Eric } from "./eric";
 import {
   ACTIONS,
   BASE_PATH,
@@ -60,6 +61,7 @@ const WALL_LOW = 1.32;
 const WALL_HIGH = 2.46;
 const WALK_SPEED = 1.9;
 const MAX_BUNNIES = 12;
+const SPIN_TIME = 11;
 const WORLD = { cx: -0.4, cz: 0.35, w: 24, d: 9.3 };
 
 /**
@@ -168,6 +170,9 @@ export class Game {
   private hemi!: THREE.HemisphereLight;
   private party!: Party;
   private partyLeft = 0;
+  private eric!: Eric;
+  private redOn = false;
+  private spinT = 0;
   private scanMats: THREE.MeshBasicMaterial[] = [];
   private clip = new THREE.Plane(new THREE.Vector3(0, -1, 0), WALL_LOW);
   private wallTarget = WALL_LOW;
@@ -237,6 +242,7 @@ export class Game {
 
     this.hemi = new THREE.HemisphereLight(0xffffff, 0xb59c88, 1.25);
     this.scene.add(this.hemi);
+    this.eric = new Eric(this.scene, overlay, (glyph, at) => this.spawn(glyph, at, { spread: 0.3, up: 0.6, life: 1.4, size: 0.24 }));
     this.party = new Party(this.scene, overlay, (glyph, at) => this.spawn(glyph, at, { spread: 0.3, up: 0.6, life: 1.3, size: 0.22 }));
     const sun = new THREE.DirectionalLight(0xfff0dc, 1.5);
     sun.position.set(5, 10, 6);
@@ -566,6 +572,66 @@ export class Game {
     store.set({ sound: on });
   }
 
+  /** Eric walks in the door and the whole place starts spinning. */
+  ericHome() {
+    if (!this.started || this.spinT > 0) return;
+    if (!this.eric.comeHome()) {
+      this.toast("Eric is… busy");
+      return;
+    }
+    this.spinT = SPIN_TIME;
+    this.follow = false;
+    this.camTween = null;
+    sfx.whoosh();
+    this.toast("🏠 Eric got home!");
+    this.say("ERIC'S HOME!!", 2.5);
+    store.set({ spinning: true, follow: false });
+  }
+
+  /** Eric brings company home. */
+  toggleEricParty() {
+    if (!this.started) return;
+    if (this.eric.partying) {
+      this.eric.endParty();
+      return;
+    }
+    if (this.spinT > 0) return;
+    this.eric.startParty();
+    this.toast("😈 Eric's bringing friends back to his room");
+    this.say("Not again…", 2.5);
+    this.tweenCamera(new THREE.Vector3(6.7, 0, 0.8), 11);
+  }
+
+  private updateEric(real: number, dt: number) {
+    if (this.spinT > 0) {
+      this.spinT = Math.max(0, this.spinT - real);
+      const p = 1 - this.spinT / SPIN_TIME;
+      const speed = 5.2 * Math.sin(Math.PI * p) ** 0.7; // ramps up, then winds down
+      this.orbitBy(real * speed);
+      this.guy.face(this.guy.heading + 2.6);
+      for (const b of this.bunnies) b.g.rotation.y += real * 14;
+      if (Math.random() < real * 8)
+        this.spawn(pick(["🌀", "💫", "😵‍💫", "✨"]), this.tmp.set(this.pos.x + (Math.random() - 0.5) * 6, 1 + Math.random() * 1.5, this.pos.z + (Math.random() - 0.5) * 5), { spread: 0.4, up: 0.7, life: 1.2, size: 0.26 });
+      if (this.spinT === 0) {
+        this.eric.stopSpin();
+        store.set({ spinning: false });
+        this.say("…I'm gonna be sick.", 2.5);
+      }
+    }
+    this.eric.update(this.started ? dt : real, real);
+    sfx.techno(this.eric.redMix > 0.5);
+
+    // red light special (skipped while the disco is running the lights)
+    const k = this.eric.redMix;
+    if ((k > 0 || this.redOn) && this.party.mix === 0) {
+      this.redOn = k > 0;
+      this.hemi.intensity = 1.25 * (1 - 0.72 * k);
+      this.sun.intensity = 1.5 * (1 - 0.85 * k);
+      this.hemi.color.setRGB(1, 1 - 0.8 * k, 1 - 0.8 * k);
+      for (const m of this.scanMats) m.color.setRGB(5 * (1 - 0.35 * k), 5 * (1 - 0.8 * k), 5 * (1 - 0.8 * k));
+    }
+  }
+
   /** Throw a party (or send everyone home). */
   toggleParty() {
     if (!this.started) return;
@@ -634,6 +700,8 @@ export class Game {
       }
     });
     this.party.dispose();
+    this.eric.dispose();
+    sfx.techno(false);
     sfx.party(false);
     this.post.dispose();
     this.renderer.dispose();
@@ -840,7 +908,7 @@ export class Game {
             t: "act",
             anim: "toss",
             dur: 0.9,
-            face: Math.PI / 2,
+            face: 0, // out the front door
             end: () => {
               this.guy.setProp("none");
               this.dirt.trash = 0;
@@ -1283,6 +1351,7 @@ export class Game {
     this.guy.update(this.started ? dt : real);
     this.updateFx(real, dt);
     this.updateParty(real, dt);
+    this.updateEric(real, dt);
     this.updateCamera(Math.min(0.25, raw));
     if (this.gameLook) this.gameWorld?.update(this.clip.constant, this.camera.position);
     if (this.gameLook) this.post.render(this.renderer, this.scene, this.camera);
@@ -1477,6 +1546,7 @@ export class Game {
       if (this.bubbleT <= 0) this.bubble.classList.remove("show");
     }
     this.party.updateTags((v) => this.project(v));
+    this.eric.updateTags((v) => this.project(v));
     const head = this.guy.headWorld(new THREE.Vector3());
     const [bx, by] = this.project(head);
     this.bubble.style.transform = `translate3d(${bx.toFixed(1)}px, ${by.toFixed(1)}px, 0)`;
@@ -1520,6 +1590,8 @@ export class Game {
       day: 1 + Math.floor(m / 1440),
       pizzaCooldown: this.pizzaCd,
       party: this.party.active,
+      ericParty: this.eric.partying,
+      ericLeft: Math.max(0, this.eric.partyLeft),
       partyLeft: Math.max(0, this.partyLeft),
       currentUid: r && !r.auto ? r.uid : null,
     });

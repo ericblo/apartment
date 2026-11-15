@@ -23,7 +23,8 @@ export type Anim =
   | "dance"
   | "twerk"
   | "pogo"
-  | "chug";
+  | "chug"
+  | "type";
 
 export type Prop = "none" | "sponge" | "vacuum" | "can" | "bag" | "pizza";
 
@@ -524,6 +525,20 @@ export class Character {
         p.torso = 0.15 * sin(b * 2);
         break;
       }
+      case "type":
+        // seated at a desk, typing
+        p.hipL = -1.45;
+        p.hipR = -1.45;
+        p.kneeL = 1.45;
+        p.kneeR = 1.45;
+        p.lift = -0.4;
+        p.torso = 0.1;
+        p.shL = -1.0;
+        p.shR = -1.0;
+        p.elL = -0.6 + 0.12 * Math.max(0, sin(t * 11));
+        p.elR = -0.6 + 0.12 * Math.max(0, sin(t * 11 + 2));
+        p.headX = 0.12;
+        break;
       case "chug":
         p.shR = -1.0;
         p.shRz = -0.2;

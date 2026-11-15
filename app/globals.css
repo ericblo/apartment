@@ -737,6 +737,42 @@ input:focus-visible {
   background: var(--ink);
   color: var(--paper);
 }
+.dock-btn.ericparty {
+  background: #ffc9c4;
+}
+.dock-btn.ericparty.on {
+  background: #b3202a;
+  color: #fff;
+}
+.dock-btn.eric {
+  background: #d7f0e6;
+}
+/* "Eric got home": the interface spins along with the room */
+@keyframes whirl {
+  to {
+    rotate: 360deg;
+  }
+}
+body[data-spin="1"] .card,
+body[data-spin="1"] .dock-btn,
+body[data-spin="1"] .tools button,
+body[data-spin="1"] .marker,
+body[data-spin="1"] .nametag {
+  animation: whirl 1.1s linear infinite;
+}
+body[data-spin="1"] .dock-btn:nth-child(odd),
+body[data-spin="1"] .tools button:nth-child(odd),
+body[data-spin="1"] .home {
+  animation-direction: reverse;
+}
+body[data-spin="1"] .dock-btn:disabled {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-spin="1"] * {
+    animation: none !important;
+  }
+}
 .dock-btn:disabled {
   opacity: 0.55;
 }

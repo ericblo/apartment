@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import { Character, type Look } from "./character";
 import { findPath, nearestWalkable, type Pt } from "./nav";
+import { FRONT_DOOR } from "./data";
 
 type GuestDef = { name: string; look: Partial<Look> };
 
@@ -20,8 +21,8 @@ export const GUESTS: GuestDef[] = [
   { name: "Andrea", look: { hair: 0x4a2418, tee: 0xf06aa8, shorts: 0x151515, stripes: false, longHair: true, scale: 0.95, skin: 0xd9a070 } },
 ];
 
-/** Where guests come in and go out: the far end of the hallway. */
-const DOOR: Pt = [4.75, -2.8];
+/** Where guests come in and go out. */
+const DOOR: Pt = FRONT_DOOR;
 /** The dance floor: the living-room rug and the space around it. */
 const SPOTS: Pt[] = [
   [-4.5, -1.9],

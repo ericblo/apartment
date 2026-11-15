@@ -81,11 +81,14 @@ export const SPOT = {
   stove: [-0.44, -2.5] as Pt,
   fridge: [-1.35, -2.8] as Pt,
   bin: [2.05, -3.05] as Pt,
-  door: [4.75, -2.8] as Pt,
+  door: [-2.5, -2.0] as Pt,
   bedside: [8.3, -1.7] as Pt,
   sofa: [-5.75, 0.05] as Pt,
   keys: [-6.96, -2.95] as Pt,
 };
+
+/** The front door: on the kitchen's south wall, just right of the fridge as you face it. */
+export const FRONT_DOOR: Pt = SPOT.door;
 
 export const BIN_POS: [number, number, number] = [2.05, 0, -3.6];
 export const DISH_POS: [number, number, number] = [0.32, 0.9, -1.98];

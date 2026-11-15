@@ -627,6 +627,13 @@ function furnish(b: Builder) {
   b.plant(-5.3, 2.5, "palm", 1.1);
   b.box(-5.3, -3.5, 3.585, 3.6, 0.8, 2.1, 0xbfe0ee, { tall: true, cast: false }); // bay windows
 
+  // ---------- front door, on the wall right of the fridge
+  b.box(-3.02, -1.98, -1.53, -1.5, 0, 2.12, 0xe6dccb, { tall: true });
+  b.box(-2.95, -2.05, -1.56, -1.52, 0, 2.05, 0x7a4a2a, { tall: true });
+  b.box(-2.86, -2.14, -1.575, -1.56, 1.1, 1.9, 0x8c5a36, { tall: true, cast: false });
+  b.box(-2.86, -2.14, -1.575, -1.56, 0.15, 0.95, 0x8c5a36, { tall: true, cast: false });
+  b.blob(-2.16, 1.0, -1.6, 0.04, 0xd9b36a);
+
   // ---------- kitchen
   b.rug(-3.85, -2.0, -3.4, -2.25, "jute", JUTE, 3);
   // fridge with its magnets and photos

@@ -71,6 +71,13 @@ function Intro({ engine }: { engine: Engine | null }) {
 export default function Hud({ engine }: { engine: Engine | null }) {
   const hud = useHud();
   const partying = hud.party;
+  const spinning = hud.spinning;
+  useEffect(() => {
+    document.body.dataset.spin = spinning ? "1" : "0";
+    return () => {
+      delete document.body.dataset.spin;
+    };
+  }, [spinning]);
   useEffect(() => {
     // the page backdrop goes dark while the party is on
     document.body.dataset.party = partying ? "1" : "0";
@@ -233,6 +240,9 @@ export default function Hud({ engine }: { engine: Engine | null }) {
             <span className="dock-icon">🍕</span>
             <span className="dock-label">{hud.pizzaCooldown > 0 ? `Pizza in ${Math.ceil(hud.pizzaCooldown)}s` : "Bribe with pizza"}</span>
           </button>
+        </div>
+        <div className="dock-row">
+          <span className="dock-title">Chaos</span>
           <button
             type="button"
             className={`dock-btn party${hud.party ? " on" : ""}`}
@@ -241,6 +251,26 @@ export default function Hud({ engine }: { engine: Engine | null }) {
           >
             <span className="dock-icon">{hud.party ? "🚪" : "🎉"}</span>
             <span className="dock-label">{hud.party ? `End the party (${Math.ceil(hud.partyLeft)}s)` : "Throw a party"}</span>
+          </button>
+          <button
+            type="button"
+            className="dock-btn eric"
+            disabled={hud.spinning}
+            onClick={() => engine.ericHome()}
+            title="Eric walks in and everything starts spinning"
+          >
+            <span className="dock-icon">🌀</span>
+            <span className="dock-label">{hud.spinning ? "Wheeeee" : "Eric got home"}</span>
+          </button>
+          <button
+            type="button"
+            className={`dock-btn ericparty${hud.ericParty ? " on" : ""}`}
+            disabled={hud.spinning}
+            onClick={() => engine.toggleEricParty()}
+            title="Eric brings five friends back to the red bedroom"
+          >
+            <span className="dock-icon">{hud.ericParty ? "🚪" : "😈"}</span>
+            <span className="dock-label">{hud.ericParty ? "Kick them out" : "Eric party"}</span>
           </button>
         </div>
       </section>

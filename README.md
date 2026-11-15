@@ -21,6 +21,8 @@ Then open http://localhost:3000/apartment.
 - `app/game/engine.ts` — three.js scene, camera, chores, needs, mess and effects.
 - `app/game/stylized.ts` — the hand-built "video game" version of the apartment (floor plan, walls, furniture, rugs, plants), measured from the scan. The 🎨 button switches between it and the real scan.
 - The `Ink` class in `engine.ts` adds thin outlines in the video game look.
+- `app/game/party.ts` — the house party: guests, disco lights, dance floor.
+- `app/game/eric.ts` — Eric, the other resident: his desk-and-bedroom routine, coming home (everything spins) and the "Eric party".
 - `app/game/character.ts` — the roommate, built from primitives and animated in code.
 - `app/game/nav.ts` + `nav.json` — walkable-floor grid baked from the scan, with A* pathfinding.
 - `app/game/data.ts` — where things are in the apartment and what can be done there.
