@@ -799,6 +799,11 @@ body[data-spin="1"] .dock-btn:disabled {
   background: var(--tomato);
 }
 
+.dock-tabs,
+.tools-toggle {
+  display: none;
+}
+
 @media (max-width: 720px) {
   .hud {
     padding: 10px;
@@ -869,6 +874,67 @@ body[data-spin="1"] .dock-btn:disabled {
   }
   .toast {
     font-size: 13px;
+  }
+
+  /* actions: three tabs, every button visible in a grid (no sideways scrolling) */
+  .dock {
+    gap: 8px;
+    padding: 8px;
+  }
+  .dock-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .dock-tabs button {
+    padding: 7px 4px;
+    border-radius: 12px;
+    border: 2px solid var(--ink);
+    background: var(--paper-2);
+    font-family: var(--font-d);
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  .dock-tabs button.on {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .dock-row {
+    display: none;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+  .dock[data-tab="chores"] .dock-row[data-group="chores"],
+  .dock[data-tab="treats"] .dock-row[data-group="treats"],
+  .dock[data-tab="chaos"] .dock-row[data-group="chaos"] {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .dock-btn {
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    min-height: 62px;
+    padding: 7px 4px 9px;
+    font-size: 11.5px;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+  }
+  .dock-icon {
+    font-size: 22px;
+  }
+  /* camera tools fold away behind one button */
+  .tools-toggle {
+    display: block;
+  }
+  .tools[data-open="0"] button:not(.tools-toggle) {
+    display: none;
+  }
+  .toasts {
+    bottom: 215px;
   }
 }
 

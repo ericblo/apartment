@@ -70,6 +70,9 @@ function Intro({ engine }: { engine: Engine | null }) {
 
 export default function Hud({ engine }: { engine: Engine | null }) {
   const hud = useHud();
+  // phones show one group of actions at a time, and tuck the camera tools away
+  const [tab, setTab] = useState<"chores" | "treats" | "chaos">("chores");
+  const [toolsOpen, setToolsOpen] = useState(false);
   const partying = hud.party;
   const spinning = hud.spinning;
   useEffect(() => {
@@ -192,7 +195,10 @@ export default function Hud({ engine }: { engine: Engine | null }) {
         ))}
       </div>
 
-      <nav className="tools" aria-label="Camera">
+      <nav className="tools" aria-label="Camera" data-open={toolsOpen ? "1" : "0"}>
+        <button type="button" className={`tools-toggle${toolsOpen ? " on" : ""}`} onClick={() => setToolsOpen(!toolsOpen)} aria-expanded={toolsOpen} title="View options">
+          {toolsOpen ? "✕" : "⚙️"}
+        </button>
         <button type="button" onClick={() => engine.rotate(-1)} title="Rotate left">
           ↺
         </button>
@@ -222,12 +228,25 @@ export default function Hud({ engine }: { engine: Engine | null }) {
         </button>
       </nav>
 
-      <section className="dock">
-        <div className="dock-row">
+      <section className="dock" data-tab={tab}>
+        <div className="dock-tabs" role="tablist" aria-label="Actions">
+          {(
+            [
+              ["chores", "🧽", "Chores"],
+              ["treats", "🍕", "Treats"],
+              ["chaos", "🎉", "Chaos"],
+            ] as const
+          ).map(([id, icon, label]) => (
+            <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "on" : ""} onClick={() => setTab(id)}>
+              <span>{icon}</span> {label}
+            </button>
+          ))}
+        </div>
+        <div className="dock-row" data-group="chores">
           <span className="dock-title">Chores</span>
           {CHORES.map(dockButton)}
         </div>
-        <div className="dock-row">
+        <div className="dock-row" data-group="treats">
           <span className="dock-title">Treats</span>
           {FUN.map(dockButton)}
           <button
@@ -241,7 +260,7 @@ export default function Hud({ engine }: { engine: Engine | null }) {
             <span className="dock-label">{hud.pizzaCooldown > 0 ? `Pizza in ${Math.ceil(hud.pizzaCooldown)}s` : "Bribe with pizza"}</span>
           </button>
         </div>
-        <div className="dock-row">
+        <div className="dock-row" data-group="chaos">
           <span className="dock-title">Chaos</span>
           <button
             type="button"
